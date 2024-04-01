@@ -65,12 +65,12 @@ if __name__ == '__main__':
     username = os.environ.get('USER_NAME')
     password = os.environ.get('PASSWORD')
 
-    client = paho.Client(client_id="Player1", userdata=None, protocol=paho.MQTTv5)
+    client = paho.Client(paho.CallbackAPIVersion.VERSION1, client_id="Player1", userdata=None, protocol=paho.MQTTv5)
     
     # enable TLS for secure connection
     client.tls_set(tls_version=mqtt.client.ssl.PROTOCOL_TLS)
     # set username and password
-    client.username_pw_set(username, password)
+    #client.username_pw_set(username, password)  #comment out for now
     # connect to HiveMQ Cloud on port 8883 (default for MQTT)
     client.connect(broker_address, broker_port)
 
