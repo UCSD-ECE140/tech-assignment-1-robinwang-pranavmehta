@@ -79,10 +79,10 @@ if __name__ == '__main__':
     client.on_message = on_message
     client.on_publish = on_publish # Can comment out to not print when publishing to topics
 
-    lobby_name = "rwpm"
-    player_name = "DaPhysikist"
-    player_move = "UP"
-    team_name = "ATeam"
+    lobby_name = input("Please enter lobby name: ")
+    player_name = input("Please enter player name: ")
+    team_name = input("Please enter team name: ")
+    player_move = None
 
     client.subscribe(f"games/{lobby_name}/lobby")
     client.subscribe(f'games/{lobby_name}/{player_name}/game_state')
@@ -94,8 +94,25 @@ if __name__ == '__main__':
 
     time.sleep(1) # Wait a second to resolve game start
     client.publish(f"games/{lobby_name}/start", "START")
-    client.publish(f"games/{lobby_name}/{player_name}/move", player_move)
-    client.publish(f"games/{lobby_name}/start", "STOP")
-
-
-    client.loop_forever()
+    while True:
+        try:
+            while True:
+                client.loop_read()
+                player_input = input("Please use wasd to move: ")
+                if player_input in ['w', 'a', 's', 'd']:
+                    if player_input == "w":
+                        player_move = "UP"
+                    elif player_input == "a":
+                        player_move = "LEFT"
+                    elif player_input == "s":
+                        player_move = "DOWN"
+                    elif player_input == "d":
+                        player_move = "RIGHT"
+                    
+                    client.publish(f"games/{lobby_name}/{player_name}/move", player_move)
+                    break
+                else:
+                    print("Invalid input! Please enter either 'w', 'a', 's', or 'd'.")
+        except KeyboardInterrupt:
+            client.publish(f"games/{lobby_name}/start", "STOP")
+            break
