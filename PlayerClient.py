@@ -79,32 +79,22 @@ if __name__ == '__main__':
     client.on_message = on_message
     client.on_publish = on_publish # Can comment out to not print when publishing to topics
 
-    lobby_name = "TestLobby"
-    player_1 = "Player1"
-    player_2 = "Player2"
-    player_3 = "Player3"
+    lobby_name = "rwpm"
+    player_name = "DaPhysikist"
+    player_move = "UP"
+    team_name = "ATeam"
 
     client.subscribe(f"games/{lobby_name}/lobby")
-    client.subscribe(f'games/{lobby_name}/+/game_state')
+    client.subscribe(f'games/{lobby_name}/{player_name}/game_state')
     client.subscribe(f'games/{lobby_name}/scores')
 
     client.publish("new_game", json.dumps({'lobby_name':lobby_name,
-                                            'team_name':'ATeam',
-                                            'player_name' : player_1}))
-    
-    client.publish("new_game", json.dumps({'lobby_name':lobby_name,
-                                            'team_name':'BTeam',
-                                            'player_name' : player_2}))
-    
-    client.publish("new_game", json.dumps({'lobby_name':lobby_name,
-                                        'team_name':'BTeam',
-                                        'player_name' : player_3}))
+                                            'team_name': team_name,
+                                            'player_name' : player_name}))
 
     time.sleep(1) # Wait a second to resolve game start
     client.publish(f"games/{lobby_name}/start", "START")
-    client.publish(f"games/{lobby_name}/{player_1}/move", "UP")
-    client.publish(f"games/{lobby_name}/{player_2}/move", "DOWN")
-    client.publish(f"games/{lobby_name}/{player_3}/move", "DOWN")
+    client.publish(f"games/{lobby_name}/{player_name}/move", player_move)
     client.publish(f"games/{lobby_name}/start", "STOP")
 
 
