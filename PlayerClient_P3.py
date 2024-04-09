@@ -67,6 +67,12 @@ def on_message(client, userdata, msg):
         print(str(msg.payload))
 
 
+def determine_best_target(coin1_list, coin2_list, coin3_list):
+    pass
+
+def determine_next_move(obstacles, target):
+    pass
+
 if __name__ == '__main__':
     load_dotenv(dotenv_path='./credentials.env')
     
@@ -91,16 +97,26 @@ if __name__ == '__main__':
 
     lobby_name = input("Please enter lobby name: ")
     player_name = input("Please enter player name: ")
-    team_name = input("Please enter team name: ")
-    player_move = None
 
     client.subscribe(f"games/{lobby_name}/lobby")
-    client.subscribe(f'games/{lobby_name}/{player_name}/game_state')
+    client.subscribe(f'games/{lobby_name}/+/game_state')
     client.subscribe(f'games/{lobby_name}/scores')
 
     client.publish("new_game", json.dumps({'lobby_name':lobby_name,
-                                            'team_name': team_name,
+                                            'team_name':'ATeam',
                                             'player_name' : player_name}))
+    
+    client.publish("new_game", json.dumps({'lobby_name':lobby_name,
+                                            'team_name':'ATeam',
+                                            'player_name' : 'player_2'}))
+    
+    client.publish("new_game", json.dumps({'lobby_name':lobby_name,
+                                        'team_name':'BTeam',
+                                        'player_name' : 'player_3'}))
+    
+    client.publish("new_game", json.dumps({'lobby_name':lobby_name,
+                                        'team_name':'BTeam',
+                                        'player_name' : 'player_4'}))
 
     time.sleep(1) # Wait a second to resolve game start
 
@@ -127,22 +143,7 @@ if __name__ == '__main__':
                 print(exit_reason)
                 client.publish(f"games/{lobby_name}/start", "STOP")
                 break
-            while True:
-                player_input = input("Please use wasd to move: ")
-                if player_input in ['w', 'a', 's', 'd']:
-                    if player_input == "w":
-                        player_move = "UP"
-                    elif player_input == "a":
-                        player_move = "LEFT"
-                    elif player_input == "s":
-                        player_move = "DOWN"
-                    elif player_input == "d":
-                        player_move = "RIGHT"
-                    
-                    client.publish(f"games/{lobby_name}/{player_name}/move", player_move)
-                    break
-                else:
-                    print("Invalid input! Please enter either 'w', 'a', 's', or 'd'.")
+           
         except KeyboardInterrupt:
             client.publish(f"games/{lobby_name}/start", "STOP")
             break
