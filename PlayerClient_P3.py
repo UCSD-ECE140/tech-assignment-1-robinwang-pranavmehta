@@ -5,8 +5,10 @@ from dotenv import load_dotenv
 import paho.mqtt.client as paho
 from paho import mqtt
 import time
+import random
+import math
 
-global exit, exit_reason, scores, lobby_name
+global exit, exit_reason, scores, lobby_name, player_1_name, player_2_name, player_3_name, player_4_name, move_flag, p1_data, p2_data, p3_data, p4_data
 exit = 0
 exit_reason = None
 scores = None
@@ -57,21 +59,113 @@ def on_message(client, userdata, msg):
         :param userdata: userdata is set when initiating the client, here it is userdata=None
         :param msg: the message with topic and payload
     """
-    global exit, exit_reason, scores
+    global exit, exit_reason, scores, move_flag, p1_data, p2_data, p3_data, p4_data
     if msg.topic == f"games/{lobby_name}/lobby":
         exit = 1
-        exit_reason = str(msg.payload)
+        exit_reason = json.loads(msg.payload)
     elif msg.topic == f"games/{lobby_name}/scores":
-        scores = str(msg.payload)
-    elif msg.topic == f"games/{lobby_name}/{player_name}/game_state":
-        print(str(msg.payload))
+        scores = json.loads(msg.payload)
+    elif msg.topic == f"games/{lobby_name}/player_1/game_state":
+        p1_data = json.loads(msg.payload)
+    elif msg.topic == f"games/{lobby_name}/player_2/game_state":
+        p2_data = json.loads(msg.payload)
+    elif msg.topic == f"games/{lobby_name}/player_3/game_state":
+        p3_data = json.loads(msg.payload)
+    elif msg.topic == f"games/{lobby_name}/player_4/game_state":
+        p4_data = json.loads(msg.payload)
+    move_flag = 1
 
 
-def determine_best_target(coin1_list, coin2_list, coin3_list):
-    pass
+def determine_best_target(player_data):
+    coins = player_data["coin1"] + player_data["coin2"] + player_data["coin3"]
+    if coins:
+        target = coins[0]
+        target_cost = math.sqrt(math.pow(target[0],2) + math.pow(target[1],2))
+        for coin in player_data["coin1"]:
+            cost = math.sqrt(math.pow(target[0],2) + math.pow(target[1],2))
+            if cost < target_cost:
+                target = coin
+                target_cost = cost
 
-def determine_next_move(obstacles, target):
-    pass
+        for coin in player_data["coin2"]:
+            cost = math.sqrt(math.pow(target[0],2) + math.pow(target[1],2)) - 1   #weighing more valuable coin more
+            if cost < target_cost:
+                target = coin
+                target_cost = cost
+
+        for coin in player_data["coin3"]:
+            cost = math.sqrt(math.pow(target[0],2) + math.pow(target[1],2)) - 2  #weighing more valuable coin more
+            if cost < target_cost:
+                target = coin
+                target_cost = cost
+
+        print("targetSuccess")
+        return target
+    else:
+        return None
+
+def determine_next_move(player_data):
+    pos = player_data["currentPosition"]
+    target = determine_best_target(player_data)
+    obstacles = player_data["enemyPositions"] + player_data["teammatePositions"] + player_data["walls"]
+
+    if target is not None:
+        x_obstacles = []
+        y_obstacles = []
+        for obstacle in obstacles:
+            x_obstacles.append(obstacle[0])
+            y_obstacles.append(obstacle[1])
+
+        x_diff = target[0] - pos[0]
+        y_diff = target[0] - pos[0]
+
+        if (abs(x_diff) >= abs(y_diff)):
+            if (x_diff > 0):
+                new_x = pos[0] + 1
+                if new_x not in x_obstacles:
+                    return "RIGHT"
+
+            elif (x_diff < 0):
+                new_x = pos[0] - 1
+                if new_x not in x_obstacles:
+                    return "LEFT"
+            
+            new_y_1 = pos[1] + 1
+            new_y_2 = pos[1] - 1
+            if new_y_1 not in y_obstacles:
+                return "UP"
+            if new_y_2 not in y_obstacles:
+                return "DOWN"
+            
+        elif (abs(x_diff) < abs(y_diff)):
+            if (y_diff > 0):
+                new_y = pos[1] + 1
+                if new_y not in y_obstacles:
+                    "UP"
+            elif (y_diff < 0):
+                new_y = pos[1] - 1
+                if new_y not in y_obstacles:
+                    "DOWN"
+            
+            new_x_1 = pos[0] + 1
+            new_x_2 = pos[0] - 1
+            if new_x_1 not in x_obstacles:
+                return "RIGHT"
+            if new_x_2 not in x_obstacles:
+                return "LEFT"
+            
+    return "UP"
+
+def match_move(move):
+    match(move):
+        case 1:
+            return "UP"
+        case 2:
+            return "DOWN"
+        case 3:
+            return "LEFT"
+        case 4:
+            return "RIGHT"
 
 if __name__ == '__main__':
     load_dotenv(dotenv_path='./credentials.env')
@@ -96,7 +190,10 @@ if __name__ == '__main__':
     client.on_publish = on_publish # Can comment out to not print when publishing to topics
 
     lobby_name = input("Please enter lobby name: ")
-    player_name = input("Please enter player name: ")
+    #player_1_name = input("Please enter name for player 1: ")
+    #player_2_name = input("Please enter name for player 2: ")
+    #player_3_name = input("Please enter name for player 3: ")
+    #player_4_name = input("Please enter name for player 4: ")
 
     client.subscribe(f"games/{lobby_name}/lobby")
     client.subscribe(f'games/{lobby_name}/+/game_state')
@@ -104,7 +201,7 @@ if __name__ == '__main__':
 
     client.publish("new_game", json.dumps({'lobby_name':lobby_name,
                                             'team_name':'ATeam',
-                                            'player_name' : player_name}))
+                                            'player_name' : 'player_1'}))
     
     client.publish("new_game", json.dumps({'lobby_name':lobby_name,
                                             'team_name':'ATeam',
@@ -118,6 +215,7 @@ if __name__ == '__main__':
                                         'team_name':'BTeam',
                                         'player_name' : 'player_4'}))
 
+    
     time.sleep(1) # Wait a second to resolve game start
 
     while True:
@@ -128,22 +226,99 @@ if __name__ == '__main__':
         elif start_game == "n":
             break
         else:
-            print("Please enter y or n.")   
-    client.loop_read()
-    client.loop_read() 
-    client.loop_read()
-    client.loop_read()
-    while True:
+            print("Please enter y or n.")
+
+    client.loop_start()   
+    
+    i = 0
+    move_flag = 1
+    player_1_move = match_move(random.randrange(1,4))
+    player_2_move = match_move(random.randrange(1,4))
+    player_3_move = match_move(random.randrange(1,4))
+    player_4_move = match_move(random.randrange(1,4))
+    while (True):
         try:
-            client.loop_read()
-            client.loop_read()
-            client.loop_read()
-            client.loop_read()
             if exit == 1:
                 print(exit_reason)
                 client.publish(f"games/{lobby_name}/start", "STOP")
                 break
-           
+
+            if player_1_move is not None: client.publish(f"games/{lobby_name}/player_1/move", player_1_move)
+            time.sleep(3)
+            if player_2_move is not None: client.publish(f"games/{lobby_name}/player_2/move", player_2_move)
+            time.sleep(3)
+            if player_3_move is not None: client.publish(f"games/{lobby_name}/player_3/move", player_3_move)
+            time.sleep(3)
+            if player_4_move is not None: client.publish(f"games/{lobby_name}/player_4/move", player_4_move)
+            time.sleep(3)
+            move_flag = 0
+            while(move_flag != 1): pass
+            player_1_move = determine_next_move(p1_data)
+            player_2_move = determine_next_move(p2_data)
+            player_3_move = determine_next_move(p3_data)
+            player_4_move = determine_next_move(p4_data)
+            """
+            while True:
+                player_input = input("Please use wasd to move: ")
+                if player_input in ['w', 'a', 's', 'd']:
+                    if player_input == "w":
+                        client.publish(f"games/{lobby_name}/player_1/move", "UP")
+                    elif player_input == "a":
+                        client.publish(f"games/{lobby_name}/player_1/move", "LEFT")
+                    elif player_input == "s":
+                        client.publish(f"games/{lobby_name}/player_1/move", "DOWN")
+                    elif player_input == "d":
+                        client.publish(f"games/{lobby_name}/player_1/move", "RIGHT")
+                    break
+                else:
+                    print("Invalid input! Please enter either 'w', 'a', 's', or 'd'.")
+            while True:
+                player_input = input("Please use wasd to move: ")
+                if player_input in ['w', 'a', 's', 'd']:
+                    if player_input == "w":
+                        client.publish(f"games/{lobby_name}/player_2/move", "UP")
+                    elif player_input == "a":
+                        client.publish(f"games/{lobby_name}/player_2/move", "LEFT")
+                    elif player_input == "s":
+                        client.publish(f"games/{lobby_name}/player_2/move", "DOWN")
+                    elif player_input == "d":
+                        client.publish(f"games/{lobby_name}/player_2/move", "RIGHT")
+                    break
+                else:
+                    print("Invalid input! Please enter either 'w', 'a', 's', or 'd'.")
+            while True:
+                player_input = input("Please use wasd to move: ")
+                if player_input in ['w', 'a', 's', 'd']:
+                    if player_input == "w":
+                        client.publish(f"games/{lobby_name}/player_3/move", "UP")
+                    elif player_input == "a":
+                        client.publish(f"games/{lobby_name}/player_3/move", "LEFT")
+                    elif player_input == "s":
+                        client.publish(f"games/{lobby_name}/player_3/move", "DOWN")
+                    elif player_input == "d":
+                        client.publish(f"games/{lobby_name}/player_3/move", "RIGHT")
+                    break
+                else:
+                    print("Invalid input! Please enter either 'w', 'a', 's', or 'd'.")
+            while True:
+                player_input = input("Please use wasd to move: ")
+                if player_input in ['w', 'a', 's', 'd']:
+                    if player_input == "w":
+                        client.publish(f"games/{lobby_name}/player_4/move", "UP")
+                    elif player_input == "a":
+                        client.publish(f"games/{lobby_name}/player_4/move", "LEFT")
+                    elif player_input == "s":
+                        client.publish(f"games/{lobby_name}/player_4/move", "DOWN")
+                    elif player_input == "d":
+                        client.publish(f"games/{lobby_name}/player_4/move", "RIGHT")
+                    break
+                else:
+                    print("Invalid input! Please enter either 'w', 'a', 's', or 'd'.")
+            """
+
         except KeyboardInterrupt:
             client.publish(f"games/{lobby_name}/start", "STOP")
             break
+
+    client.loop_stop()
+    

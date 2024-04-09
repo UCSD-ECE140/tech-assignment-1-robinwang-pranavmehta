@@ -112,7 +112,8 @@ if __name__ == '__main__':
         elif start_game == "n":
             break
         else:
-            print("Please enter y or n.")   
+            print("Please enter y or n.") 
+    
 
     client.loop_start()
 
