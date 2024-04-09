@@ -67,94 +67,101 @@ def on_message(client, userdata, msg):
         scores = json.loads(msg.payload)
     elif msg.topic == f"games/{lobby_name}/player_1/game_state":
         p1_data = json.loads(msg.payload)
+        move_flag += 1
     elif msg.topic == f"games/{lobby_name}/player_2/game_state":
         p2_data = json.loads(msg.payload)
+        move_flag += 1
     elif msg.topic == f"games/{lobby_name}/player_3/game_state":
         p3_data = json.loads(msg.payload)
+        move_flag += 1
     elif msg.topic == f"games/{lobby_name}/player_4/game_state":
         p4_data = json.loads(msg.payload)
-    move_flag = 1
-
+        move_flag += 1
 
 def determine_best_target(player_data):
-    coins = player_data["coin1"] + player_data["coin2"] + player_data["coin3"]
-    if coins:
-        target = coins[0]
-        target_cost = math.sqrt(math.pow(target[0],2) + math.pow(target[1],2))
-        for coin in player_data["coin1"]:
-            cost = math.sqrt(math.pow(target[0],2) + math.pow(target[1],2))
-            if cost < target_cost:
-                target = coin
-                target_cost = cost
+    try:
+        coins = player_data["coin1"] + player_data["coin2"] + player_data["coin3"]
+        if coins:
+            target = coins[0]
+            target_cost = math.sqrt(math.pow(target[0],2) + math.pow(target[1],2))
+            for coin in player_data["coin1"]:
+                cost = math.sqrt(math.pow(target[0],2) + math.pow(target[1],2))
+                if cost < target_cost:
+                    target = coin
+                    target_cost = cost
 
-        for coin in player_data["coin2"]:
-            cost = math.sqrt(math.pow(target[0],2) + math.pow(target[1],2)) - 1   #weighing more valuable coin more
-            if cost < target_cost:
-                target = coin
-                target_cost = cost
+            for coin in player_data["coin2"]:
+                cost = math.sqrt(math.pow(target[0],2) + math.pow(target[1],2)) - 1   #weighing more valuable coin more
+                if cost < target_cost:
+                    target = coin
+                    target_cost = cost
 
-        for coin in player_data["coin3"]:
-            cost = math.sqrt(math.pow(target[0],2) + math.pow(target[1],2)) - 2  #weighing more valuable coin more
-            if cost < target_cost:
-                target = coin
-                target_cost = cost
+            for coin in player_data["coin3"]:
+                cost = math.sqrt(math.pow(target[0],2) + math.pow(target[1],2)) - 2  #weighing more valuable coin more
+                if cost < target_cost:
+                    target = coin
+                    target_cost = cost
 
-        print("targetSuccess")
-        return target
-    else:
-        return None
+            return target
+        else:
+            return None
+    except Exception as e:
+        print(e)
 
 def determine_next_move(player_data):
-    pos = player_data["currentPosition"]
-    target = determine_best_target(player_data)
-    obstacles = player_data["enemyPositions"] + player_data["teammatePositions"] + player_data["walls"]
+    try:
+        pos = player_data["currentPosition"]
+        target = determine_best_target(player_data)
+        obstacles = player_data["enemyPositions"] + player_data["teammatePositions"] + player_data["walls"]
 
-    if target is not None:
-        x_obstacles = []
-        y_obstacles = []
-        for obstacle in obstacles:
-            x_obstacles.append(obstacle[0])
-            y_obstacles.append(obstacle[1])
+        if target is not None:
+            x_obstacles = []
+            y_obstacles = []
+            for obstacle in obstacles:
+                x_obstacles.append(obstacle[0])
+                y_obstacles.append(obstacle[1])
 
-        x_diff = target[0] - pos[0]
-        y_diff = target[0] - pos[0]
+            x_diff = target[0] - pos[0]
+            y_diff = target[0] - pos[0]
 
-        if (abs(x_diff) >= abs(y_diff)):
-            if (x_diff > 0):
-                new_x = pos[0] + 1
-                if new_x not in x_obstacles:
+            if (abs(x_diff) >= abs(y_diff)):
+                if (x_diff > 0):
+                    new_x = pos[0] + 1
+                    if new_x not in x_obstacles:
+                        return "RIGHT"
+
+                elif (x_diff < 0):
+                    new_x = pos[0] - 1
+                    if new_x not in x_obstacles:
+                        return "LEFT"
+                
+                new_y_1 = pos[1] + 1
+                new_y_2 = pos[1] - 1
+                if new_y_1 not in y_obstacles:
+                    return "UP"
+                if new_y_2 not in y_obstacles:
+                    return "DOWN"
+                
+            elif (abs(x_diff) < abs(y_diff)):
+                if (y_diff > 0):
+                    new_y = pos[1] + 1
+                    if new_y not in y_obstacles:
+                       return "UP"
+                elif (y_diff < 0):
+                    new_y = pos[1] - 1
+                    if new_y not in y_obstacles:
+                        return "DOWN"
+                
+                new_x_1 = pos[0] + 1
+                new_x_2 = pos[0] - 1
+                if new_x_1 not in x_obstacles:
                     return "RIGHT"
-
-            elif (x_diff < 0):
-                new_x = pos[0] - 1
-                if new_x not in x_obstacles:
+                if new_x_2 not in x_obstacles:
                     return "LEFT"
-            
-            new_y_1 = pos[1] + 1
-            new_y_2 = pos[1] - 1
-            if new_y_1 not in y_obstacles:
-                return "UP"
-            if new_y_2 not in y_obstacles:
-                return "DOWN"
-            
-        elif (abs(x_diff) < abs(y_diff)):
-            if (y_diff > 0):
-                new_y = pos[1] + 1
-                if new_y not in y_obstacles:
-                    "UP"
-            elif (y_diff < 0):
-                new_y = pos[1] - 1
-                if new_y not in y_obstacles:
-                    "DOWN"
-            
-            new_x_1 = pos[0] + 1
-            new_x_2 = pos[0] - 1
-            if new_x_1 not in x_obstacles:
-                return "RIGHT"
-            if new_x_2 not in x_obstacles:
-                return "LEFT"
-            
-    return "UP"
+                
+        return match_move(random.randrange(1,5))
+    except Exception as e:
+        print(e)
 
 def match_move(move):
     match(move):
@@ -231,11 +238,11 @@ if __name__ == '__main__':
     client.loop_start()   
     
     i = 0
-    move_flag = 1
-    player_1_move = match_move(random.randrange(1,4))
-    player_2_move = match_move(random.randrange(1,4))
-    player_3_move = match_move(random.randrange(1,4))
-    player_4_move = match_move(random.randrange(1,4))
+    move_flag = 0
+    player_1_move = match_move(random.randrange(1,5))
+    player_2_move = match_move(random.randrange(1,5))
+    player_3_move = match_move(random.randrange(1,5))
+    player_4_move = match_move(random.randrange(1,5))
     while (True):
         try:
             if exit == 1:
@@ -243,6 +250,7 @@ if __name__ == '__main__':
                 client.publish(f"games/{lobby_name}/start", "STOP")
                 break
 
+            move_flag = 0
             if player_1_move is not None: client.publish(f"games/{lobby_name}/player_1/move", player_1_move)
             time.sleep(3)
             if player_2_move is not None: client.publish(f"games/{lobby_name}/player_2/move", player_2_move)
@@ -251,8 +259,7 @@ if __name__ == '__main__':
             time.sleep(3)
             if player_4_move is not None: client.publish(f"games/{lobby_name}/player_4/move", player_4_move)
             time.sleep(3)
-            move_flag = 0
-            while(move_flag != 1): pass
+            while(move_flag < 4): time.sleep(0.1)
             player_1_move = determine_next_move(p1_data)
             player_2_move = determine_next_move(p2_data)
             player_3_move = determine_next_move(p3_data)
@@ -319,6 +326,9 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             client.publish(f"games/{lobby_name}/start", "STOP")
             break
+
+        except Exception as e:
+            print(e)
 
     client.loop_stop()
     
