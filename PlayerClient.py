@@ -6,6 +6,10 @@ import paho.mqtt.client as paho
 from paho import mqtt
 import time
 
+global exit, exit_reason, scores, lobby_name, player_name, team_name
+exit = 0
+exit_reason = None
+scores = None
 
 # setting callbacks for different events to see if it works, print the message etc.
 def on_connect(client, userdata, flags, rc, properties=None):
@@ -53,8 +57,14 @@ def on_message(client, userdata, msg):
         :param userdata: userdata is set when initiating the client, here it is userdata=None
         :param msg: the message with topic and payload
     """
-
-    print("message: " + msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
+    global exit, exit_reason, scores
+    if msg.topic == f"games/{lobby_name}/lobby":
+        exit = 1
+        exit_reason = str(msg.payload)
+    elif msg.topic == f"games/{lobby_name}/scores":
+        scores = str(msg.payload)
+    elif msg.topic == f"games/{lobby_name}/{player_name}/game_state":
+        print(str(msg.payload))
 
 
 if __name__ == '__main__':
@@ -93,11 +103,31 @@ if __name__ == '__main__':
                                             'player_name' : player_name}))
 
     time.sleep(1) # Wait a second to resolve game start
-    client.publish(f"games/{lobby_name}/start", "START")
+
+    while True:
+        start_game = input("Start game? Please enter y or n: ")
+        if start_game == "y":
+            client.publish(f"games/{lobby_name}/start", "START")
+            break
+        elif start_game == "n":
+            break
+        else:
+            print("Please enter y or n.")   
+    client.loop_read()
+    client.loop_read() 
+    client.loop_read()
+    client.loop_read()
     while True:
         try:
+            client.loop_read()
+            client.loop_read()
+            client.loop_read()
+            client.loop_read()
+            if exit == 1:
+                print(exit_reason)
+                client.publish(f"games/{lobby_name}/start", "STOP")
+                break
             while True:
-                client.loop_read()
                 player_input = input("Please use wasd to move: ")
                 if player_input in ['w', 'a', 's', 'd']:
                     if player_input == "w":
