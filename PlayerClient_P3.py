@@ -31,6 +31,8 @@ def on_message(client, userdata, msg):
 def determine_best_target(player_data, player_id):
     pos = player_data["currentPosition"]
     coins = player_data["coin1"] + player_data["coin2"] + player_data["coin3"]
+    print("coins")
+    print(coins)
     if coins:
         player_target = player_targets[player_id]
         if player_target is not None and player_target in coins:
@@ -49,7 +51,6 @@ def determine_next_move(player_data, player_id):
         print(player_id)
         print(pos)
         obstacles = player_data["enemyPositions"] + player_data["teammatePositions"] + player_data["walls"]  #remember coordinates given in y,x pairs
-        print(obstacles)
         x_obstacles = set((obstacle[1], obstacle[0]) for obstacle in obstacles if obstacle[0] == pos[0])
         y_obstacles = set((obstacle[1], obstacle[0]) for obstacle in obstacles if obstacle[1] == pos[1])
         x_diff = target[1] - pos[1]
