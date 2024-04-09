@@ -46,24 +46,27 @@ def determine_next_move(player_data, player_id):
     target = determine_best_target(player_data, player_id)
     if target is not None:
         pos = player_data["currentPosition"]
-        obstacles = player_data["enemyPositions"] + player_data["teammatePositions"] + player_data["walls"]
-        x_obstacles = set(obstacle[0] for obstacle in obstacles if obstacle[1] == pos[1])
-        y_obstacles = set(obstacle[1] for obstacle in obstacles if obstacle[0] == pos[0])
-        x_diff = target[0] - pos[0]
-        y_diff = target[1] - pos[1]
+        print(player_id)
+        print(pos)
+        obstacles = player_data["enemyPositions"] + player_data["teammatePositions"] + player_data["walls"]  #remember coordinates given in y,x pairs
+        print(obstacles)
+        x_obstacles = set((obstacle[1], obstacle[0]) for obstacle in obstacles if obstacle[0] == pos[0])
+        y_obstacles = set((obstacle[1], obstacle[0]) for obstacle in obstacles if obstacle[1] == pos[1])
+        x_diff = target[1] - pos[1]
+        y_diff = target[0] - pos[0]
 
-        if x_diff > 0 and (pos[0] + 1) not in x_obstacles and pos[0] + 1 < 10:
+        if x_diff > 0 and (pos[1] + 1, pos[0]) not in x_obstacles and (pos[1] + 1) < 10:
             print("R")
             return "RIGHT"
-        elif x_diff < 0 and pos[0] - 1 not in x_obstacles and pos[0] - 1 >= 0:
+        elif x_diff < 0 and (pos[1] - 1, pos[0]) not in x_obstacles and (pos[1] - 1) >= 0:
             print("L")
             return "LEFT"
-        elif y_diff > 0 and pos[1] + 1 not in y_obstacles and pos[1] + 1 < 10:
-            print("U")
-            return "UP"
-        elif y_diff < 0 and pos[1] - 1 not in y_obstacles and pos[1] - 1 >= 0:
+        elif y_diff > 0 and (pos[1], pos[0] + 1) not in y_obstacles and (pos[0] + 1) < 10:
             print("D")
             return "DOWN"
+        elif y_diff < 0 and (pos[1], pos[0] - 1) not in y_obstacles and (pos[0] - 1) >= 0:
+            print("U")
+            return "UP"
     return random.choice(["UP", "DOWN", "LEFT", "RIGHT"])
 
 if __name__ == '__main__':
