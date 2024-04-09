@@ -113,16 +113,11 @@ if __name__ == '__main__':
             break
         else:
             print("Please enter y or n.")   
-    client.loop_read()
-    client.loop_read() 
-    client.loop_read()
-    client.loop_read()
+
+    client.loop_start()
+
     while True:
         try:
-            client.loop_read()
-            client.loop_read()
-            client.loop_read()
-            client.loop_read()
             if exit == 1:
                 print(exit_reason)
                 client.publish(f"games/{lobby_name}/start", "STOP")
@@ -131,18 +126,18 @@ if __name__ == '__main__':
                 player_input = input("Please use wasd to move: ")
                 if player_input in ['w', 'a', 's', 'd']:
                     if player_input == "w":
-                        player_move = "UP"
+                        client.publish(f"games/{lobby_name}/{player_name}/move", "UP")
                     elif player_input == "a":
-                        player_move = "LEFT"
+                        client.publish(f"games/{lobby_name}/{player_name}/move", "LEFT")
                     elif player_input == "s":
-                        player_move = "DOWN"
+                        client.publish(f"games/{lobby_name}/{player_name}/move", "DOWN")
                     elif player_input == "d":
-                        player_move = "RIGHT"
-                    
-                    client.publish(f"games/{lobby_name}/{player_name}/move", player_move)
+                        client.publish(f"games/{lobby_name}/{player_name}/move", "RIGHT")
                     break
                 else:
                     print("Invalid input! Please enter either 'w', 'a', 's', or 'd'.")
         except KeyboardInterrupt:
             client.publish(f"games/{lobby_name}/start", "STOP")
             break
+
+    client.loop_stop()
