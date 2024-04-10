@@ -6,6 +6,8 @@ import time
 import paho.mqtt.client as paho
 from dotenv import load_dotenv
 
+DEFAULT_CHOICE = "UP"
+
 global exit, exit_reason, scores, lobby_name, player_name, team_name
 exit = 0
 exit_reason = None
@@ -64,13 +66,14 @@ def determine_next_move(player_data, player_id):
     target = determine_best_target(player_data, player_id)
     pos = player_data["currentPosition"]
     prev = previous_pos[player_id]
-    obstacles = player_data["enemyPositions"] + player_data["teammatePositions"] + player_data["walls"]  #remember coordinates given in y,x pairs
+    obstacles = player_data["enemyPositions"] + player_data["teammatePositions"] + player_data["walls"]  #obstacles given in y,x pairs
     if prev is not None:
         obstacles.append(prev)
     x_obstacles = set((obstacle[1], obstacle[0]) for obstacle in obstacles if obstacle[0] == pos[0])
     y_obstacles = set((obstacle[1], obstacle[0]) for obstacle in obstacles if obstacle[1] == pos[1])
     previous_pos[player_id] = pos
-    if target is not None:
+
+    if target is not None:                          #decision logic based on target
         x_diff = target[1] - pos[1]
         y_diff = target[0] - pos[0]
         if x_diff > 0 and (pos[1] + 1, pos[0]) not in x_obstacles and (pos[1] + 1) < 10:
@@ -86,22 +89,25 @@ def determine_next_move(player_data, player_id):
             print("U")
             return "UP"
         
-    choices = ["UP", "DOWN", "LEFT", "RIGHT"]
-    if (pos[1] + 1, pos[0]) in x_obstacles: choices.remove("RIGHT")
-    if (pos[1] - 1, pos[0]) in x_obstacles: choices.remove("LEFT")
-    if (pos[1], pos[0] - 1) in y_obstacles: choices.remove("UP")
-    if (pos[1], pos[0] + 1) in y_obstacles: choices.remove("DOWN")
-    if not choices:
+    choices = ["UP", "DOWN", "LEFT", "RIGHT"]                     #decision logic has failed (no target), player must make a random choice
+    if (pos[1] + 1, pos[0]) in x_obstacles or (pos[1] + 1) >= 10: choices.remove("RIGHT")    #remove options that collide with obstacle or go off grid
+    if (pos[1] - 1, pos[0]) in x_obstacles or (pos[1] - 1) < 0: choices.remove("LEFT")
+    if (pos[1], pos[0] - 1) in y_obstacles or (pos[0] - 1) < 0: choices.remove("UP")
+    if (pos[1], pos[0] + 1) in y_obstacles or (pos[0] + 1) >= 10: choices.remove("DOWN")
+    if not choices:                    #if no options available, return to previous position
         x_diff = prev[1] - pos[1]
         y_diff = prev[0] - pos[0]
         if x_diff < 0:
-            choices.append("UP")
-        if x_diff > 0:
-            choices.append("DOWN")
-        if y_diff < 0:
             choices.append("LEFT")
-        if y_diff > 0:
+        if x_diff > 0:
             choices.append("RIGHT")
+        if y_diff < 0:
+            choices.append("UP")
+        if y_diff > 0:
+            choices.append("DOWN")
+        if not choices:                          #if all else fails
+            choices.append(DEFAULT_CHOICE)
+            print("default")
     return random.choice(choices)
 
 if __name__ == '__main__':
@@ -157,9 +163,9 @@ if __name__ == '__main__':
     while True:
         try:
             if exit == 1:
-                print(exit_reason)
+                print(exit_reason[2:-1])
                 client.publish(f"games/{lobby_name}/start", "STOP")
-                print(scores)
+                print("Scores:", scores)
                 break
 
             while move_flag < 4:

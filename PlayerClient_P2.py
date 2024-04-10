@@ -120,9 +120,9 @@ if __name__ == '__main__':
     while True:
         try:
             if exit == 1:
-                print(exit_reason)
+                print(exit_reason[2:-1])
                 client.publish(f"games/{lobby_name}/start", "STOP")
-                print(scores)
+                print("Scores:", scores)
                 break
             while True:
                 player_input = input("Please use wasd to move: ")
