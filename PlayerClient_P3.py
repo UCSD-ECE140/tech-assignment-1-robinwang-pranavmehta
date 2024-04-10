@@ -36,7 +36,7 @@ def on_message(client, userdata, msg):
         move_flag += 1
 
 def determine_best_target(player_data, player_id):
-    pos = player_data["currentPosition"]
+    pos = player_data["currentPosition"]              #determines current position
 
     for coin in player_coin_mem[player_id]:   #removes all nearby coins to flush old memory
         x_dist = abs(coin[1] - pos[1])
@@ -51,24 +51,24 @@ def determine_best_target(player_data, player_id):
 
     coins_left = player_coin_mem[player_id]
 
-    if coins_left:
+    if coins_left:                                         #prioritizes keeping the old target
         player_target = player_targets[player_id]
         if player_target is not None and player_target in coins_left:
             return player_target
 
-        target = min(coins_left, key=lambda coin: math.sqrt((coin[0] - pos[0]) ** 2 + (coin[1] - pos[1]) ** 2))
+        target = min(coins_left, key=lambda coin: math.sqrt((coin[0] - pos[0]) ** 2 + (coin[1] - pos[1]) ** 2))   #determines new target if old target not present
         player_targets[player_id] = target
         return target
-    else:
+    else:                                              #no coins detected, no valid target -> leads to random move
         return None
 
 def determine_next_move(player_data, player_id):
-    target = determine_best_target(player_data, player_id)
-    pos = player_data["currentPosition"]
+    target = determine_best_target(player_data, player_id)   #determine target
+    pos = player_data["currentPosition"]  #determine current and previous position
     prev = previous_pos[player_id]
     obstacles = player_data["enemyPositions"] + player_data["teammatePositions"] + player_data["walls"]  #obstacles given in y,x pairs
     if prev is not None:
-        obstacles.append(prev)
+        obstacles.append(prev)    #avoid going back to previous position if possible
     x_obstacles = set((obstacle[1], obstacle[0]) for obstacle in obstacles if obstacle[0] == pos[0])
     y_obstacles = set((obstacle[1], obstacle[0]) for obstacle in obstacles if obstacle[1] == pos[1])
     previous_pos[player_id] = pos
@@ -89,7 +89,7 @@ def determine_next_move(player_data, player_id):
             print("U")
             return "UP"
         
-    choices = ["UP", "DOWN", "LEFT", "RIGHT"]                     #decision logic has failed (no target), player must make a random choice
+    choices = ["UP", "DOWN", "LEFT", "RIGHT"]          #decision logic has failed or there is no target, player must make a random choice
     if (pos[1] + 1, pos[0]) in x_obstacles or (pos[1] + 1) >= 10: choices.remove("RIGHT")    #remove options that collide with obstacle or go off grid
     if (pos[1] - 1, pos[0]) in x_obstacles or (pos[1] - 1) < 0: choices.remove("LEFT")
     if (pos[1], pos[0] - 1) in y_obstacles or (pos[0] - 1) < 0: choices.remove("UP")
@@ -125,20 +125,20 @@ if __name__ == '__main__':
     client.on_message = on_message
     client.on_publish = on_publish
 
-    lobby_name = input("Please enter lobby name: ")
+    lobby_name = input("Please enter lobby name: ")      #creates a lobby based on input
     client.subscribe(f"games/{lobby_name}/lobby")
     for i in range(1, 5):
         client.subscribe(f"games/{lobby_name}/player_{i}/game_state")
 
     client.subscribe(f"games/{lobby_name}/scores")
 
-    # Initialize player data and targets
+    # Initialize player data, targets, coin memory, previous position memory
     player_data = {f"player_{i}": None for i in range(1, 5)}
     player_targets = {f"player_{i}": None for i in range(1, 5)}
     player_coin_mem = {f"player_{i}": [] for i in range(1, 5)}
     previous_pos = {f"player_{i}": None for i in range(1, 5)}
 
-    client.publish("new_game", json.dumps({'lobby_name':lobby_name,
+    client.publish("new_game", json.dumps({'lobby_name':lobby_name,            #Adds players to lobby
                                             'team_name':'ATeam',
                                             'player_name' : 'player_1'}))
     
@@ -168,16 +168,16 @@ if __name__ == '__main__':
                 print("Scores:", scores)
                 break
 
-            while move_flag < 4:
+            while move_flag < 4:      #move flag used to determine feedback has arrived for the moves of each player
                 time.sleep(0.1)
             move_flag = 0
             for i in range(1, 5):
                 player_id = f"player_{i}"
-                move = determine_next_move(player_data[player_id], player_id)
-                client.publish(f"games/{lobby_name}/{player_id}/move", move)
+                move = determine_next_move(player_data[player_id], player_id)     #determines player move
+                client.publish(f"games/{lobby_name}/{player_id}/move", move)      #publishes player move
                 time.sleep(3)
 
-        except KeyboardInterrupt:
+        except KeyboardInterrupt:                                        #if ctrl+c pressed
             client.publish(f"games/{lobby_name}/start", "STOP")
             break
 
