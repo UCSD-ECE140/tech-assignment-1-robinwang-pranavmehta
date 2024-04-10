@@ -90,8 +90,11 @@ if __name__ == '__main__':
     client3.subscribe("ece140brwpm/#")
 
     while(True):
-        client3.loop_read()
-        client1.publish("ece140brwpm/1", json.dumps({'data':random.randrange(1,10,1)}))
-        client2.publish("ece140brwpm/1", json.dumps({'data':random.randrange(1,10,1)}))
-        print("Sending data")
-        time.sleep(3)
+        try:
+            client3.loop_read()
+            client1.publish("ece140brwpm/1", json.dumps({'data':random.randrange(1,10,1)}))
+            client2.publish("ece140brwpm/1", json.dumps({'data':random.randrange(1,10,1)}))
+            print("Sending data")
+            time.sleep(3)
+        except KeyboardInterrupt:
+            break

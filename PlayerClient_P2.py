@@ -122,6 +122,7 @@ if __name__ == '__main__':
             if exit == 1:
                 print(exit_reason)
                 client.publish(f"games/{lobby_name}/start", "STOP")
+                print(scores)
                 break
             while True:
                 player_input = input("Please use wasd to move: ")

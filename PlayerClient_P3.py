@@ -24,12 +24,12 @@ def on_subscribe(client, userdata, mid, granted_qos, properties=None):
 def on_message(client, userdata, msg):
     global exit, exit_reason, scores, move_flag, player_data
     player_id = msg.topic.split("/")[-2]  # Extract player ID from the topic
-    if msg.topic == f"games/{lobby_name}/lobby":
+    if msg.topic == f"games/{lobby_name}/lobby":  #Exits when lobby state changes - either error or game over
         exit = 1
         exit_reason = str(msg.payload)
-    elif msg.topic == f"games/{lobby_name}/scores":
+    elif msg.topic == f"games/{lobby_name}/scores":   #Gets the scores
         scores = json.loads(msg.payload)
-    elif msg.topic.startswith(f"games/{lobby_name}/player_") and msg.topic.endswith("/game_state"):
+    elif msg.topic.startswith(f"games/{lobby_name}/player_") and msg.topic.endswith("/game_state"):  #Gets feedback for player moves
         player_data[player_id] = json.loads(msg.payload)
         move_flag += 1
 
@@ -85,12 +85,12 @@ def determine_next_move(player_data, player_id):
         elif y_diff < 0 and (pos[1], pos[0] - 1) not in y_obstacles and (pos[0] - 1) >= 0:
             print("U")
             return "UP"
+        
     choices = ["UP", "DOWN", "LEFT", "RIGHT"]
     if (pos[1] + 1, pos[0]) in x_obstacles: choices.remove("RIGHT")
     if (pos[1] - 1, pos[0]) in x_obstacles: choices.remove("LEFT")
     if (pos[1], pos[0] - 1) in y_obstacles: choices.remove("UP")
     if (pos[1], pos[0] + 1) in y_obstacles: choices.remove("DOWN")
-
     if not choices:
         x_diff = prev[1] - pos[1]
         y_diff = prev[0] - pos[0]
@@ -102,7 +102,6 @@ def determine_next_move(player_data, player_id):
             choices.append("LEFT")
         if y_diff > 0:
             choices.append("RIGHT")
-
     return random.choice(choices)
 
 if __name__ == '__main__':
@@ -150,9 +149,7 @@ if __name__ == '__main__':
                                         'player_name' : 'player_4'}))
 
     # Start the game
-    start_game = input("Start game? Please enter y: ")
-    if start_game == "y":
-        client.publish(f"games/{lobby_name}/start", "START")
+    client.publish(f"games/{lobby_name}/start", "START")
 
     move_flag = 0
     client.loop_start()
@@ -162,6 +159,7 @@ if __name__ == '__main__':
             if exit == 1:
                 print(exit_reason)
                 client.publish(f"games/{lobby_name}/start", "STOP")
+                print(scores)
                 break
 
             while move_flag < 4:
