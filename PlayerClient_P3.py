@@ -6,6 +6,11 @@ import time
 import paho.mqtt.client as paho
 from dotenv import load_dotenv
 
+global exit, exit_reason, scores, lobby_name, player_name, team_name
+exit = 0
+exit_reason = None
+scores = None
+
 # Callbacks for MQTT events
 def on_connect(client, userdata, flags, rc, properties=None):
     print("CONNACK received with code %s." % rc)
@@ -21,7 +26,7 @@ def on_message(client, userdata, msg):
     player_id = msg.topic.split("/")[-2]  # Extract player ID from the topic
     if msg.topic == f"games/{lobby_name}/lobby":
         exit = 1
-        exit_reason = json.loads(msg.payload)
+        exit_reason = str(msg.payload)
     elif msg.topic == f"games/{lobby_name}/scores":
         scores = json.loads(msg.payload)
     elif msg.topic.startswith(f"games/{lobby_name}/player_") and msg.topic.endswith("/game_state"):
@@ -30,15 +35,26 @@ def on_message(client, userdata, msg):
 
 def determine_best_target(player_data, player_id):
     pos = player_data["currentPosition"]
+
+    for coin in player_coin_mem[player_id]:   #removes all nearby coins to flush old memory
+        x_dist = abs(coin[1] - pos[1])
+        y_dist = abs(coin[0] - pos[0])
+        if (x_dist <= 2 or y_dist <= 2):
+            player_coin_mem[player_id].remove(coin)
+
     coins = player_data["coin1"] + player_data["coin2"] + player_data["coin3"]
-    print("coins")
-    print(coins)
-    if coins:
+
+    for coin in coins:                              #readds coins that are still there to update memory
+        player_coin_mem[player_id].append(coin)
+
+    coins_left = player_coin_mem[player_id]
+
+    if coins_left:
         player_target = player_targets[player_id]
-        if player_target is not None and player_target in coins:
+        if player_target is not None and player_target in coins_left:
             return player_target
 
-        target = min(coins, key=lambda coin: math.sqrt((coin[0] - pos[0]) ** 2 + (coin[1] - pos[1]) ** 2))
+        target = min(coins_left, key=lambda coin: math.sqrt((coin[0] - pos[0]) ** 2 + (coin[1] - pos[1]) ** 2))
         player_targets[player_id] = target
         return target
     else:
@@ -46,16 +62,17 @@ def determine_best_target(player_data, player_id):
 
 def determine_next_move(player_data, player_id):
     target = determine_best_target(player_data, player_id)
+    pos = player_data["currentPosition"]
+    obstacles = player_data["enemyPositions"] + player_data["teammatePositions"] + player_data["walls"]  #remember coordinates given in y,x pairs
+    if previous_pos[player_id] is not None:
+        obstacles.append(previous_pos[player_id])
+        print(previous_pos[player_id])
+    x_obstacles = set((obstacle[1], obstacle[0]) for obstacle in obstacles if obstacle[0] == pos[0])
+    y_obstacles = set((obstacle[1], obstacle[0]) for obstacle in obstacles if obstacle[1] == pos[1])
+    previous_pos[player_id] = pos
     if target is not None:
-        pos = player_data["currentPosition"]
-        print(player_id)
-        print(pos)
-        obstacles = player_data["enemyPositions"] + player_data["teammatePositions"] + player_data["walls"]  #remember coordinates given in y,x pairs
-        x_obstacles = set((obstacle[1], obstacle[0]) for obstacle in obstacles if obstacle[0] == pos[0])
-        y_obstacles = set((obstacle[1], obstacle[0]) for obstacle in obstacles if obstacle[1] == pos[1])
         x_diff = target[1] - pos[1]
         y_diff = target[0] - pos[0]
-
         if x_diff > 0 and (pos[1] + 1, pos[0]) not in x_obstacles and (pos[1] + 1) < 10:
             print("R")
             return "RIGHT"
@@ -68,7 +85,11 @@ def determine_next_move(player_data, player_id):
         elif y_diff < 0 and (pos[1], pos[0] - 1) not in y_obstacles and (pos[0] - 1) >= 0:
             print("U")
             return "UP"
-    return random.choice(["UP", "DOWN", "LEFT", "RIGHT"])
+    choices = ["UP", "DOWN", "LEFT", "RIGHT"]
+    if (pos[1] + 1, pos[0]) in x_obstacles: choices.remove("RIGHT")
+    if (pos[1] - 1, pos[0]) in x_obstacles: choices.remove("LEFT")
+    if (pos[1], pos[0] - 1) in y_obstacles: choices.remove("UP")
+    return random.choice(choices)
 
 if __name__ == '__main__':
     load_dotenv(dotenv_path='./credentials.env')
@@ -95,6 +116,8 @@ if __name__ == '__main__':
     # Initialize player data and targets
     player_data = {f"player_{i}": None for i in range(1, 5)}
     player_targets = {f"player_{i}": None for i in range(1, 5)}
+    player_coin_mem = {f"player_{i}": [] for i in range(1, 5)}
+    previous_pos = {f"player_{i}": None for i in range(1, 5)}
 
     client.publish("new_game", json.dumps({'lobby_name':lobby_name,
                                             'team_name':'ATeam',
