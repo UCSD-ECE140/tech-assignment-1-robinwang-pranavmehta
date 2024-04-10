@@ -63,10 +63,10 @@ def determine_best_target(player_data, player_id):
 def determine_next_move(player_data, player_id):
     target = determine_best_target(player_data, player_id)
     pos = player_data["currentPosition"]
+    prev = previous_pos[player_id]
     obstacles = player_data["enemyPositions"] + player_data["teammatePositions"] + player_data["walls"]  #remember coordinates given in y,x pairs
-    if previous_pos[player_id] is not None:
-        obstacles.append(previous_pos[player_id])
-        print(previous_pos[player_id])
+    if prev is not None:
+        obstacles.append(prev)
     x_obstacles = set((obstacle[1], obstacle[0]) for obstacle in obstacles if obstacle[0] == pos[0])
     y_obstacles = set((obstacle[1], obstacle[0]) for obstacle in obstacles if obstacle[1] == pos[1])
     previous_pos[player_id] = pos
@@ -89,6 +89,20 @@ def determine_next_move(player_data, player_id):
     if (pos[1] + 1, pos[0]) in x_obstacles: choices.remove("RIGHT")
     if (pos[1] - 1, pos[0]) in x_obstacles: choices.remove("LEFT")
     if (pos[1], pos[0] - 1) in y_obstacles: choices.remove("UP")
+    if (pos[1], pos[0] + 1) in y_obstacles: choices.remove("DOWN")
+
+    if not choices:
+        x_diff = prev[1] - pos[1]
+        y_diff = prev[0] - pos[0]
+        if x_diff < 0:
+            choices.append("UP")
+        if x_diff > 0:
+            choices.append("DOWN")
+        if y_diff < 0:
+            choices.append("LEFT")
+        if y_diff > 0:
+            choices.append("RIGHT")
+
     return random.choice(choices)
 
 if __name__ == '__main__':
