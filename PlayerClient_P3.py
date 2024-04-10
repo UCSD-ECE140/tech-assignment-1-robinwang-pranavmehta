@@ -143,11 +143,11 @@ if __name__ == '__main__':
                                             'player_name' : 'player_1'}))
     
     client.publish("new_game", json.dumps({'lobby_name':lobby_name,
-                                            'team_name':'ATeam',
+                                            'team_name':'BTeam',
                                             'player_name' : 'player_2'}))
     
     client.publish("new_game", json.dumps({'lobby_name':lobby_name,
-                                        'team_name':'BTeam',
+                                        'team_name':'ATeam',
                                         'player_name' : 'player_3'}))
     
     client.publish("new_game", json.dumps({'lobby_name':lobby_name,
