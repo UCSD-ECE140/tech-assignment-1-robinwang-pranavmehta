@@ -57,7 +57,7 @@ def on_message(client, userdata, msg):
         :param userdata: userdata is set when initiating the client, here it is userdata=None
         :param msg: the message with topic and payload
     """
-    global exit, exit_reason, scores
+    global exit, exit_reason, scores, move_flag
     if msg.topic == f"games/{lobby_name}/lobby":
         exit = 1
         exit_reason = str(msg.payload)
@@ -65,6 +65,7 @@ def on_message(client, userdata, msg):
         scores = str(msg.payload)
     elif msg.topic == f"games/{lobby_name}/{player_name}/game_state":
         print(str(msg.payload))
+        move_flag = 1
 
 
 if __name__ == '__main__':
@@ -108,6 +109,7 @@ if __name__ == '__main__':
     
     client.loop_start()
 
+    move_flag = 0
     while True:
         try:
             if exit == 1:                            #stops the game and exits when exit condition such as game over triggered
@@ -116,6 +118,9 @@ if __name__ == '__main__':
                 print("Scores:", scores)
                 break
             while True:
+                while move_flag < 1:
+                    time.sleep(0.1)
+                move_flag = 0
                 player_input = input("Please use wasd to move: ")         #takes user input to move player
                 if player_input in ['w', 'a', 's', 'd']:
                     if player_input == "w":
