@@ -64,7 +64,7 @@ def on_message(client, userdata, msg):
     elif msg.topic == f"games/{lobby_name}/scores":
         scores = str(msg.payload)
     elif msg.topic == f"games/{lobby_name}/{player_name}/game_state":
-        print(str(msg.payload))
+        print("Feedback: ", (str(msg.payload))[2:-1])
         move_flag = 1
 
 
