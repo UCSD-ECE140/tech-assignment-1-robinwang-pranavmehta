@@ -66,7 +66,7 @@ if __name__ == '__main__':
     username = os.environ.get('USER_NAME')
     password = os.environ.get('PASSWORD')
 
-    client1 = paho.Client(paho.CallbackAPIVersion.VERSION1, client_id="Client1", userdata=None, protocol=paho.MQTTv5)
+    client1 = paho.Client(paho.CallbackAPIVersion.VERSION1, client_id="Client1", userdata=None, protocol=paho.MQTTv5)  #setup clients 1-3
     client1.tls_set(tls_version=mqtt.client.ssl.PROTOCOL_TLS)
     client1.connect(broker_address, broker_port)
     client1.on_subscribe = on_subscribe 
@@ -87,12 +87,12 @@ if __name__ == '__main__':
     client3.on_message = on_message
     client3.on_publish = on_publish
 
-    client3.subscribe("ece140brwpm/#")
+    client3.subscribe("ece140brwpm/#")    #setup client 3 to listen
 
     while(True):
         try:
             client3.loop_read()
-            client1.publish("ece140brwpm/1", json.dumps({'data':random.randrange(1,10,1)}))
+            client1.publish("ece140brwpm/1", json.dumps({'data':random.randrange(1,10,1)}))            #setup clients 1 and 2 to send data
             client2.publish("ece140brwpm/1", json.dumps({'data':random.randrange(1,10,1)}))
             print("Sending data")
             time.sleep(3)

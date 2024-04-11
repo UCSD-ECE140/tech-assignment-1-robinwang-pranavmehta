@@ -89,7 +89,7 @@ if __name__ == '__main__':
     client.on_message = on_message
     client.on_publish = on_publish # Can comment out to not print when publishing to topics
 
-    lobby_name = input("Please enter lobby name: ")
+    lobby_name = input("Please enter lobby name: ")               #take inputs from user to setup game
     player_name = input("Please enter player name: ")
     team_name = input("Please enter team name: ")
     player_move = None
@@ -104,28 +104,19 @@ if __name__ == '__main__':
 
     time.sleep(1) # Wait a second to resolve game start
 
-    while True:
-        start_game = input("Start game? Please enter y or n: ")
-        if start_game == "y":
-            client.publish(f"games/{lobby_name}/start", "START")
-            break
-        elif start_game == "n":
-            break
-        else:
-            print("Please enter y or n.") 
+    client.publish(f"games/{lobby_name}/start", "START")   #starts the game
     
-
     client.loop_start()
 
     while True:
         try:
-            if exit == 1:
+            if exit == 1:                            #stops the game and exits when exit condition such as game over triggered
                 print(exit_reason[2:-1])
                 client.publish(f"games/{lobby_name}/start", "STOP")
                 print("Scores:", scores)
                 break
             while True:
-                player_input = input("Please use wasd to move: ")
+                player_input = input("Please use wasd to move: ")         #takes user input to move player
                 if player_input in ['w', 'a', 's', 'd']:
                     if player_input == "w":
                         client.publish(f"games/{lobby_name}/{player_name}/move", "UP")
