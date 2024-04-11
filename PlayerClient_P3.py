@@ -31,7 +31,7 @@ def on_message(client, userdata, msg):
         exit_reason = str(msg.payload)
     elif msg.topic == f"games/{lobby_name}/scores":   #Gets the scores
         scores = json.loads(msg.payload)
-    elif msg.topic.startswith(f"games/{lobby_name}/player_") and msg.topic.endswith("/game_state"):  #Gets feedback for player moves
+    elif msg.topic.startswith(f"games/{lobby_name}/ply") and msg.topic.endswith("/game_state"):  #Gets feedback for player moves
         player_data[player_id] = json.loads(msg.payload)
         move_flag += 1
 
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     username = os.environ.get('USER_NAME')
     password = os.environ.get('PASSWORD')
 
-    client = paho.Client(paho.CallbackAPIVersion.VERSION1, client_id="Player1", userdata=None, protocol=paho.MQTTv5)
+    client = paho.Client(paho.CallbackAPIVersion.VERSION1, client_id="Game1", userdata=None, protocol=paho.MQTTv5)
     client.tls_set(tls_version=paho.ssl.PROTOCOL_TLS)
     client.connect(broker_address, broker_port)
 
@@ -128,31 +128,31 @@ if __name__ == '__main__':
     lobby_name = input("Please enter lobby name: ")      #creates a lobby based on input
     client.subscribe(f"games/{lobby_name}/lobby")
     for i in range(1, 5):
-        client.subscribe(f"games/{lobby_name}/player_{i}/game_state")
+        client.subscribe(f"games/{lobby_name}/ply{i}/game_state")
 
     client.subscribe(f"games/{lobby_name}/scores")
 
     # Initialize player data, targets, coin memory, previous position memory
-    player_data = {f"player_{i}": None for i in range(1, 5)}
-    player_targets = {f"player_{i}": None for i in range(1, 5)}
-    player_coin_mem = {f"player_{i}": [] for i in range(1, 5)}
-    previous_pos = {f"player_{i}": None for i in range(1, 5)}
+    player_data = {f"ply{i}": None for i in range(1, 5)}
+    player_targets = {f"ply{i}": None for i in range(1, 5)}
+    player_coin_mem = {f"ply{i}": [] for i in range(1, 5)}
+    previous_pos = {f"ply{i}": None for i in range(1, 5)}
 
     client.publish("new_game", json.dumps({'lobby_name':lobby_name,            #Adds players to lobby
                                             'team_name':'ATeam',
-                                            'player_name' : 'player_1'}))
+                                            'player_name' : 'ply1'}))
     
     client.publish("new_game", json.dumps({'lobby_name':lobby_name,
                                             'team_name':'BTeam',
-                                            'player_name' : 'player_2'}))
+                                            'player_name' : 'ply2'}))
     
     client.publish("new_game", json.dumps({'lobby_name':lobby_name,
                                         'team_name':'ATeam',
-                                        'player_name' : 'player_3'}))
+                                        'player_name' : 'ply3'}))
     
     client.publish("new_game", json.dumps({'lobby_name':lobby_name,
                                         'team_name':'BTeam',
-                                        'player_name' : 'player_4'}))
+                                        'player_name' : 'ply4'}))
 
     # Start the game
     client.publish(f"games/{lobby_name}/start", "START")
@@ -172,7 +172,7 @@ if __name__ == '__main__':
                 time.sleep(0.1)
             move_flag = 0
             for i in range(1, 5):
-                player_id = f"player_{i}"
+                player_id = f"ply{i}"
                 move = determine_next_move(player_data[player_id], player_id)     #determines player move
                 client.publish(f"games/{lobby_name}/{player_id}/move", move)      #publishes player move
                 time.sleep(3)
