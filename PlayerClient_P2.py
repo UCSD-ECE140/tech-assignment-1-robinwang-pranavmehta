@@ -6,6 +6,10 @@ import paho.mqtt.client as paho
 from paho import mqtt
 import time
 
+global exit, exit_reason, scores, lobby_name, player_name, team_name
+exit = 0
+exit_reason = None
+scores = None
 
 # setting callbacks for different events to see if it works, print the message etc.
 def on_connect(client, userdata, flags, rc, properties=None):
@@ -53,8 +57,15 @@ def on_message(client, userdata, msg):
         :param userdata: userdata is set when initiating the client, here it is userdata=None
         :param msg: the message with topic and payload
     """
-
-    print("message: " + msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
+    global exit, exit_reason, scores, move_flag
+    if msg.topic == f"games/{lobby_name}/lobby":
+        exit = 1
+        exit_reason = str(msg.payload)
+    elif msg.topic == f"games/{lobby_name}/scores":
+        scores = str(msg.payload)
+    elif msg.topic == f"games/{lobby_name}/{player_name}/game_state":
+        print("Feedback: ", (str(msg.payload))[2:-1])
+        move_flag = 1
 
 
 if __name__ == '__main__':
@@ -65,12 +76,12 @@ if __name__ == '__main__':
     username = os.environ.get('USER_NAME')
     password = os.environ.get('PASSWORD')
 
-    client = paho.Client(callback_api_version=paho.CallbackAPIVersion.VERSION1, client_id="Player1", userdata=None, protocol=paho.MQTTv5)
+    client = paho.Client(paho.CallbackAPIVersion.VERSION1, client_id="Player1", userdata=None, protocol=paho.MQTTv5)
     
     # enable TLS for secure connection
     client.tls_set(tls_version=mqtt.client.ssl.PROTOCOL_TLS)
     # set username and password
-    client.username_pw_set(username, password)
+    #client.username_pw_set(username, password)  #comment out for now
     # connect to HiveMQ Cloud on port 8883 (default for MQTT)
     client.connect(broker_address, broker_port)
 
@@ -79,33 +90,52 @@ if __name__ == '__main__':
     client.on_message = on_message
     client.on_publish = on_publish # Can comment out to not print when publishing to topics
 
-    lobby_name = "TestLobby"
-    player_1 = "Player1"
-    player_2 = "Player2"
-    player_3 = "Player3"
+    lobby_name = input("Please enter lobby name: ")               #take inputs from user to setup game
+    player_name = input("Please enter player name: ")
+    team_name = input("Please enter team name: ")
+    player_move = None
 
     client.subscribe(f"games/{lobby_name}/lobby")
-    client.subscribe(f'games/{lobby_name}/+/game_state')
+    client.subscribe(f'games/{lobby_name}/{player_name}/game_state')
     client.subscribe(f'games/{lobby_name}/scores')
 
     client.publish("new_game", json.dumps({'lobby_name':lobby_name,
-                                            'team_name':'ATeam',
-                                            'player_name' : player_1}))
-    
-    client.publish("new_game", json.dumps({'lobby_name':lobby_name,
-                                            'team_name':'BTeam',
-                                            'player_name' : player_2}))
-    
-    client.publish("new_game", json.dumps({'lobby_name':lobby_name,
-                                        'team_name':'BTeam',
-                                        'player_name' : player_3}))
+                                            'team_name': team_name,
+                                            'player_name' : player_name}))
 
     time.sleep(1) # Wait a second to resolve game start
-    client.publish(f"games/{lobby_name}/start", "START")
-    client.publish(f"games/{lobby_name}/{player_1}/move", "UP")
-    client.publish(f"games/{lobby_name}/{player_2}/move", "DOWN")
-    client.publish(f"games/{lobby_name}/{player_3}/move", "DOWN")
-    client.publish(f"games/{lobby_name}/start", "STOP")
 
+    client.publish(f"games/{lobby_name}/start", "START")   #starts the game
+    
+    client.loop_start()
 
-    client.loop_forever()
+    move_flag = 0
+    while True:
+        try:
+            if exit == 1:                            #stops the game and exits when exit condition such as game over triggered
+                print(exit_reason[2:-1])
+                client.publish(f"games/{lobby_name}/start", "STOP")
+                print("Scores:", scores)
+                break
+            while True:
+                while move_flag < 1:
+                    time.sleep(0.1)
+                move_flag = 0
+                player_input = input("Please use wasd to move: ")         #takes user input to move player
+                if player_input in ['w', 'a', 's', 'd']:
+                    if player_input == "w":
+                        client.publish(f"games/{lobby_name}/{player_name}/move", "UP")
+                    elif player_input == "a":
+                        client.publish(f"games/{lobby_name}/{player_name}/move", "LEFT")
+                    elif player_input == "s":
+                        client.publish(f"games/{lobby_name}/{player_name}/move", "DOWN")
+                    elif player_input == "d":
+                        client.publish(f"games/{lobby_name}/{player_name}/move", "RIGHT")
+                    break
+                else:
+                    print("Invalid input! Please enter either 'w', 'a', 's', or 'd'.")
+        except KeyboardInterrupt:
+            client.publish(f"games/{lobby_name}/start", "STOP")
+            break
+
+    client.loop_stop()
