@@ -93,7 +93,7 @@ if __name__ == '__main__':
         try:
             client3.loop_read()
             client1.publish("ece140brwpm/1", json.dumps({'data':random.randrange(1,10,1)}))            #setup clients 1 and 2 to send data
-            client2.publish("ece140brwpm/1", json.dumps({'data':random.randrange(1,10,1)}))
+            client2.publish("ece140brwpm/2", json.dumps({'data':random.randrange(1,10,1)}))
             print("Sending data")
             time.sleep(3)
         except KeyboardInterrupt:
